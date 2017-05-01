@@ -1,5 +1,4 @@
 console.log('Gulp setting: BrowserSync + Pug + PostCSS + Browserify');
-
 var gulp    = require('gulp');
 var plugins = require('gulp-load-plugins')({
   DEBUG: false,
@@ -10,6 +9,12 @@ var plugins = require('gulp-load-plugins')({
   rename: { 'vinyl-buffer'        : 'buffer',
             'vinyl-source-stream' : 'source' }
 });
+
+var data = require('gulp-data'),
+    fs = require('fs'),
+    livereload = require('gulp-livereload'),
+    gulpSrcFiles = require('gulp-src-files')
+    _ = require('lodash');
 
 
 // uglified & compressed when type '--producton' behind gulp init command
@@ -42,20 +47,41 @@ gulp.task('pug', function(){
     minifyCSS: true
   };
 
+  function getPugData() {
+    var cssJsonFiles = gulpSrcFiles(['./src/css/*.json']);
+    var data = {};
+    _.map(cssJsonFiles,
+      function(path) {
+        var jsonFileNameWithDots = path.replace(/^.*[\\\/]/, '');
+        var jsonFileName = jsonFileNameWithDots.substr(0, jsonFileNameWithDots.indexOf('.'));
+        data[jsonFileName] = JSON.parse(fs.readFileSync(path));
+      }
+    );
+    console.log('data', data);
+  };
+  console.log('func init', getPugData());
+
   gulp.src(src + '*.pug')
     .pipe(plugins.plumber())
-    .pipe(plugins.pug({ pretty: true, extension: '.html' }))
+    .pipe(plugins.pug({
+      pretty: true, 
+      extension: '.html',
+      css: require('./src/css/style.css.json'),
+      data: {
+        css: JSON.parse(fs.readFileSync('./src/css/style.css.json'))
+      }
+    }))
     .pipe(prod ? plugins.htmlmin(options) : plugins.util.noop())
     .pipe(gulp.dest(dist));
 });
 
-
 // css task use PostCSS
-gulp.task('css', function(){
+gulp.task('css', function() {
 
   // require every used processors
   var processors = [
     require('postcss-import'),
+    require('postcss-modules'),
     require('css-mqpacker')({ sort: true }),
     require('lost'),
     require('postcss-cssnext')({
@@ -73,13 +99,13 @@ gulp.task('css', function(){
     zindex: false
   };
 
-  gulp.src(src + css + 'style.css')
+  gulp.src(src + css + '*.css')
     .pipe(plugins.plumber())
     .pipe(plugins.sourcemaps.init({ loadMaps: true }))
     .pipe(plugins.postcss(processors))
     .pipe(prod ? plugins.cssnano(options) : plugins.util.noop())
     .pipe(plugins.sourcemaps.write('.'))
-    .pipe(gulp.dest(dist + css));
+    .pipe(gulp.dest(dist + css))
 });
 
 // js task use Browserify
@@ -131,12 +157,11 @@ gulp.task('watch', function () {
   });
 
   gulp.watch([src + '*/*.pug',
-              src + '*.pug'       ]  , ['pug']           );
-  gulp.watch(src + css    + coFiles  , ['css']           );
+              src + '*.pug'       ]  , ['pug', 'css']           );
+  gulp.watch(src + css    + coFiles  , ['css', 'pug']           );
   gulp.watch(src + js     + coFiles  , ['js']            );
   gulp.watch(src + images + coFiles  , ['assets:images'] );
   gulp.watch(src + fonts  + coFiles  , ['assets:fonts']  );
-
   return gulp.watch(src + coFiles).on('change', plugins.browserSync.reload);
 });
 

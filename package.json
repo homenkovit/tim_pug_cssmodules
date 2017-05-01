@@ -45,6 +45,12 @@
     "vinyl-source-stream": "^1.1.0"
   },
   "dependencies": {
-    "jquery": "^2.2.3"
+    "fs": "0.0.1-security",
+    "gulp-data": "^1.2.1",
+    "gulp-livereload": "^3.8.1",
+    "gulp-src-files": "0.0.16",
+    "jquery": "^2.2.3",
+    "lodash": "^4.17.4",
+    "postcss-modules": "^0.7.0"
   }
 }
