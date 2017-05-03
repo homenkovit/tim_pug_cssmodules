@@ -13,7 +13,9 @@ var plugins = require('gulp-load-plugins')({
 var data = require('gulp-data'),
     fs = require('fs'),
     livereload = require('gulp-livereload'),
-    gulpSrcFiles = require('gulp-src-files')
+    gulpSrcFiles = require('gulp-src-files'),
+    concatCss = require('gulp-concat-css'),
+    browserSync = require('browser-sync').create(),
     _ = require('lodash');
 
 
@@ -35,7 +37,7 @@ var
 
 
 // pug task
-gulp.task('pug', function(){
+gulp.task('pug', ['css'], function(){
   var options = {
     removeComments: true,
     collapseWhitespace: true,
@@ -54,22 +56,19 @@ gulp.task('pug', function(){
       function(path) {
         var jsonFileNameWithDots = path.replace(/^.*[\\\/]/, '');
         var jsonFileName = jsonFileNameWithDots.substr(0, jsonFileNameWithDots.indexOf('.'));
-        data[jsonFileName] = JSON.parse(fs.readFileSync(path));
+        if(!_.isEmpty(fs.readFileSync(path))) data[jsonFileName] = JSON.parse(fs.readFileSync(path));
       }
     );
-    console.log('data', data);
+    console.log('pug data', data);
+    return data;
   };
-  console.log('func init', getPugData());
 
   gulp.src(src + '*.pug')
     .pipe(plugins.plumber())
     .pipe(plugins.pug({
       pretty: true, 
       extension: '.html',
-      css: require('./src/css/style.css.json'),
-      data: {
-        css: JSON.parse(fs.readFileSync('./src/css/style.css.json'))
-      }
+      data: getPugData()
     }))
     .pipe(prod ? plugins.htmlmin(options) : plugins.util.noop())
     .pipe(gulp.dest(dist));
@@ -105,6 +104,8 @@ gulp.task('css', function() {
     .pipe(plugins.postcss(processors))
     .pipe(prod ? plugins.cssnano(options) : plugins.util.noop())
     .pipe(plugins.sourcemaps.write('.'))
+    // .pipe(concatCss('./dist'))
+    // .pipe(plugins.postcss(require('postcss-normalize')))
     .pipe(gulp.dest(dist + css))
 });
 
@@ -149,20 +150,19 @@ gulp.task('del', function() {
 // watch task
 gulp.task('watch', function () {
   plugins.browserSync.init({
-    host: '192.168.0.7',
-    server: dist,
+    server: {
+      baseDir: 'dist' 
+    },
     // proxy: proxy ,
     open: true,
     notify: false,
   });
-
-  gulp.watch([src + '*/*.pug',
-              src + '*.pug'       ]  , ['pug', 'css']           );
-  gulp.watch(src + css    + coFiles  , ['css', 'pug']           );
-  gulp.watch(src + js     + coFiles  , ['js']            );
-  gulp.watch(src + images + coFiles  , ['assets:images'] );
-  gulp.watch(src + fonts  + coFiles  , ['assets:fonts']  );
-  return gulp.watch(src + coFiles).on('change', plugins.browserSync.reload);
+  gulp.watch([src + '*/*.pug', src + '*.pug'], ['css', 'pug']);
+  gulp.watch(src + css    + coFiles  , ['css', 'pug']);
+  gulp.watch(src + js     + coFiles  , ['js']);
+  gulp.watch(src + images + coFiles  , ['assets:images']);
+  gulp.watch(src + fonts  + coFiles  , ['assets:fonts']);
+  gulp.watch(['dist/**/*.*']).on('change', browserSync.reload);
 });
 
 // init / default
