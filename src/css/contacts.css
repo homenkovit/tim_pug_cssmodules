@@ -1,3 +1,4 @@
-.someclass {
-  display: block;
+.title {
+	display: block;
+	background: blue;
 }

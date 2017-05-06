@@ -36,6 +36,17 @@ var
   fonts  = 'fonts/'  ;
 
 
+/* -------- gulp server  -------- */
+gulp.task('server', function () {
+  browserSync.init({
+    server: {
+      baseDir: 'dist'
+    },
+    // proxy: "localhost:8888",
+    notify: false
+  });
+});
+
 // pug task
 gulp.task('pug', ['css'], function(){
   var options = {
@@ -147,24 +158,52 @@ gulp.task('del', function() {
   plugins.del(dist);
 });
 
+
+
+var concat = require('gulp-concat');
+ 
+gulp.task('concat', function() {
+  const fileExists = require('file-exists');
+  fileExists(
+    './dist',
+    function(err, exists) {
+      if(exists) plugins.del('./dist');
+      return console.log('error', err);
+  });
+  return gulp.src('./dist/css/*.css')
+    .pipe(concat('bundle.css'))
+    .pipe(gulp.dest('./dist/css'));
+});
+
+
+
+// concat result
+// gulp.task('concat', function() {
+//   const fileExists = require('file-exists');
+//   fileExists(
+//     './dist',
+//     function(err, exists) {
+//       if(exists) plugins.del('./dist');
+//       return console.log('error', err);
+//   });
+//   return gulp.src('./dist/css/*.css')
+//     .pipe(concatCss('bundle.css'))
+//     .pipe(gulp.dest('./dist/css'));
+// });
+
 // watch task
 gulp.task('watch', function () {
-  plugins.browserSync.init({
-    server: {
-      baseDir: 'dist' 
-    },
-    // proxy: proxy ,
-    open: true,
-    notify: false,
-  });
-  gulp.watch([src + '*/*.pug', src + '*.pug'], ['css', 'pug']);
-  gulp.watch(src + css    + coFiles  , ['css', 'pug']);
+  // gulp.watch([src + '*/*.pug', src + '*.pug'], ['concat']);
+  // gulp.watch(src + css    + '*.css'  , ['concat', 'pug']);
+  // gulp.watch('./dist/css/*.css'  , ['concat', 'pug']);
+  gulp.watch(['./src/**/*.pug', './src/**/*.css'], ['pug']);
+  gulp.watch(['./dist/css/*.css'], ['concat']);
   gulp.watch(src + js     + coFiles  , ['js']);
   gulp.watch(src + images + coFiles  , ['assets:images']);
   gulp.watch(src + fonts  + coFiles  , ['assets:fonts']);
-  gulp.watch(['dist/**/*.*']).on('change', browserSync.reload);
+  gulp.watch(['./dist/css/*.css', './dist/*.html']).on('change', browserSync.reload);
 });
 
 // init / default
-gulp.task('init', ['css', 'js', 'pug', 'assets']);
-gulp.task('default', [ 'init', 'watch' ]);
+gulp.task('init', ['concat', 'js', 'assets']);
+gulp.task('default', [ 'init', 'watch', 'server']);
